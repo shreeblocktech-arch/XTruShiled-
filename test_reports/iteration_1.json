@@ -1,0 +1,39 @@
+{
+  "summary": "Full backend + frontend regression for XtruShield/Sentiren first build. Backend: 7/7 pytest cases pass — /api/market/quotes returns live=true for BTC,ETH,BNB,TRX,USDT,USDC,DAI,LINK,MATIC with real CMC prices, sparklines, deltas; /api/market/pulse returns topGainer & topLoser; /api/sentiment/fng returns int value + classification; /api/news/latest?limit=3 returns 3 curated items (mock news fallback since CryptoPanic key empty — PER SPEC); POST /api/ai/insight returns non-empty Gemini string. Frontend: onboarding (create wallet → real BIP-39 12 words → reveal → 3-round verify quiz → PIN 111111 create+confirm with paced taps) lands on Home. Home shows portfolio-balance $111,075.21 (live), live-indicator 'Updated Xs ago', 5 asset rows (BTC/ETH/BNB/TRX/USDT-ERC20) with real prices/deltas/sparklines, all 4 timeframe chips switch, market pulse card shows Top gainer/Top loser text, ai-insight-card renders text, home-security-card renders, 3 news items render. Asset row tap opens /asset/btc sheet with all 4 tabs (Activity/Market/Security/More), sheet-close returns Home. Send flow works end-to-end: scam-prefixed address triggers send-blocked-banner, valid address enables Continue, amount step w/ send-max, fee step (slow/normal/fast), security-check screen, review, 6-tap send-pin-1 with 111111 → Sent! confirmation with tx hash. Receive shows QR (svg), asset chips, copy/share/amount/message/expiry inputs. Discover renders all 5 sections (Security/Market/AI/Tools/DApps) with connective-intelligence card; discover-Security-Overview navigates to /security. Security screen shows network-ETH/BSC/BTC/TRX rows with RPC health (no Solana row — CONFIRMED). Wallet + History tabs render lists. Import: valid 12-word BIP-39 (abandon x11 about) proceeds to PIN. MOCKED: /api/news uses curated fallback (no CryptoPanic key); wallet balances are demo values (prices are live).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "minor_observations": [
+    {"area": "Import wallet - invalid phrase", "issue": "When phrase < 12 words is entered, Continue button is disabled (grayed) and a word counter '5/12 words' appears, but there is no explicit error message/banner. Behavior effectively blocks progression, but a clearer inline error would be friendlier UX."},
+    {"area": "Home - Market Pulse strip", "issue": "The 'Top gainer / Top loser / F&G' card has no testID (renders 'Top gainer' and 'Top loser' text and works correctly). Consider adding testID='market-pulse' for future test coverage."},
+    {"area": "Discover - connective intelligence label", "issue": "testID connective-intelligence exists and card renders, but the visible label reads 'Live Intelligence' (not 'Connective Intelligence'). Not a bug; note in case naming was intentional."}
+  ],
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(optional polish) Add an explicit inline error like 'Recovery phrase must be 12 words' on the import screen when Continue is pressed with an invalid phrase (currently only the disabled Continue + word counter communicate the state).",
+    "(optional testability) Add testID='market-pulse' to the Home pulse card wrapper to make it directly targetable in E2E."
+  ],
+  "critical_code_review_comments": [
+    "server.py: Uses synchronous `requests` wrapped in asyncio.to_thread — acceptable, but consider httpx.AsyncClient for consistency.",
+    "server.py: emergentintegrations LlmChat result is stringified with str() — works, but confirm .send_message() returns a string; otherwise the insight may be a repr. Actual runtime returns strings (verified — insight is non-empty text).",
+    "server.py: /api/news/latest ignores the `limit` param when serving from cache after first call because cache_set stores the full list and cached[:limit] slice is applied — currently OK.",
+    "No MongoDB usage in this build even though DB_NAME/MONGO_URL exist in .env; acceptable for read-only proxy."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py (created)",
+    "/app/test_reports/iteration_1.json (created)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (all 12 review-request UI flows verified)"},
+  "seed_data_creation": "None — non-custodial app, no persistent seeded data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Onboarding testIDs and pacing (>=250ms between PIN taps, >=500ms between create->confirm stages) are critical. Mnemonic word DOM includes leading position number (e.g. '3jungle') — strip leading digits. Asset row testIDs are lowercase (asset-row-btc, asset-row-usdt-erc20). Send flow uses a single 'send-next-button' across recipient/amount/fee/security/review steps. Send PIN pad is 'send-pin-<digit>' and 6 taps auto-submit (no explicit confirm). Import valid BIP-39: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'. Solana intentionally absent from Security screen — do not flag as missing.",
+  "rca_of_issue": "No bugs to RCA; all requested flows work as specified."
+}
